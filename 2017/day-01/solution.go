@@ -16,24 +16,49 @@ func intAt(offset int) int {
 	return int(rune(data[offset]) - zeroRune)
 }
 func main() {
-	last := -1
+	partOne()
+	partTwo()
+}
+
+func partTwo() {
 	var count int
+	halfWay := dataLen / 2
 	for i := 0; i < dataLen; i++ {
-		next := intAt(i)
-		if last == -1 {
-			last = next
-		} else if last == next {
-			count += last
-		} else {
-			last = next
+		nextIndex := (i + halfWay) % dataLen
+		current := intAt(i)
+		next := intAt(nextIndex)
+
+		if current == next {
+			count += current
 		}
 
 	}
-	
+
+	// Count: 1188
+	fmt.Printf("Count: %d\n", count)
+}
+
+func partOne() {
+	var last *int
+	var count int
+	for i := 0; i < dataLen; i++ {
+		next := intAt(i)
+		if last == nil {
+			last = &next
+		} else if *last == next {
+			count += *last
+		} else {
+			last = &next
+		}
+
+	}
+
 	firstInt := intAt(0)
-	lastInt := intAt(dataLen-1)
+	lastInt := intAt(dataLen - 1)
 	if dataLen > 2 && firstInt == lastInt {
 		count += lastInt
 	}
-	fmt.Printf("Count: %d", count)
+
+	// Count: 1097
+	fmt.Printf("Count: %d\n", count)
 }
