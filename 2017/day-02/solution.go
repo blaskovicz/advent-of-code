@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -27,7 +28,10 @@ var data = strings.TrimSpace(`179	2358	5197	867	163	4418	3135	5049	187	166	4682	
 var spaceRe = regexp.MustCompile("\\s+")
 
 func main() {
-
+	partOne()
+	partTwo()
+}
+func partOne() {
 	// quick and dirty split; more efficient to build tokens by hand instead of allocating extra memory
 	var sum int
 	for r, row := range strings.Split(data, "\n") {
@@ -51,7 +55,38 @@ func main() {
 			panic(fmt.Errorf("row was corrupt: %s", row))
 		}
 	}
-  
-  // Sum: 39126
-	fmt.Printf("Sum: %d", sum)
+
+	// Sum: 39126
+	fmt.Printf("Sum: %d\n", sum)
+}
+
+func partTwo() {
+	// quick and dirty split; more efficient to build tokens by hand instead of allocating extra memory
+	var sum int
+	for r, row := range strings.Split(data, "\n") {
+		cols := []int{}
+		for c, colCell := range spaceRe.Split(row, -1) {
+			col, err := strconv.Atoi(colCell)
+			if err != nil {
+				panic(fmt.Errorf("Failed to parse cell(%d,%d)=%s int: %s", r, c, colCell, err))
+			}
+			cols = append(cols, col)
+		}
+		sort.Sort(sort.IntSlice(cols))
+
+		// brute force; better way is to do some bit tricks or break each number into lowest common denominator
+		for windowIndex := len(cols) - 1; windowIndex > 0; windowIndex-- {
+			windowNum := cols[windowIndex]
+			for i := 0; i < windowIndex; i++ {
+				iNum := cols[i]
+				if windowNum%iNum != 0 {
+					continue
+				}
+				sum += (windowNum / iNum)
+			}
+		}
+	}
+
+	// Sum: 258
+	fmt.Printf("Sum: %d\n", sum)
 }
