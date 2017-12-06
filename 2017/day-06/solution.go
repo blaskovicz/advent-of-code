@@ -28,6 +28,7 @@ func main() {
 	valCount := len(v)
 	seen := map[string]interface{}{}
 	var iterations uint64
+	var target string
 	for {
 		// find max
 		var max int
@@ -52,16 +53,22 @@ func main() {
 			s = append(s, strconv.Itoa(v))
 		}
 		s2 := strings.Join(s, ",")
+		//fmt.Printf("%s\n", s2)
+
 		if _, ok := seen[s2]; ok {
 			iterations++
-			break
+			if target == "" {
+				target = s2
+				iterations = 0
+			} else if s2 == target {
+				break
+			}
+		} else {
+			seen[s2] = struct{}{}
+			iterations++
 		}
-
-		//fmt.Printf("%s\n", s2)
-		seen[s2] = struct{}{}
-		iterations++
 	}
 
-	// 6681
+	// 2392
 	fmt.Printf("Iterations: %d\n", iterations)
 }
