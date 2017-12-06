@@ -27,8 +27,10 @@ func main() {
 	for index := 0; index < len(list) && index > -1; {
 		atIndex := list[index]
 		if atIndex >= 3 {
+			// part 2
 			list[index]--
 		} else {
+			// part 1
 			list[index]++
 		}
 		index += atIndex
