@@ -63,8 +63,7 @@ const (
 	ignore       = '!'
 )
 
-func (p *parser) tokenize(s string) int {
-	var count int
+func (p *parser) tokenize(s string) (count, garbagePile int) {
 	state := stateReset
 	for _, t := range s {
 		if state == stateReset {
@@ -85,6 +84,8 @@ func (p *parser) tokenize(s string) int {
 				state = stateReset
 			} else if t == ignore {
 				state = stateIgnore
+			} else {
+				garbagePile++
 			}
 		} else if state == stateNormal {
 			if t == garbageOpen {
@@ -102,7 +103,7 @@ func (p *parser) tokenize(s string) int {
 		}
 
 	}
-	return count
+	return
 }
 
 func main() {
@@ -115,6 +116,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("Failed to parse input: %s", err))
 	}
-	groupCount := newParser().tokenize(string(input))
+	groupCount, garbageCount := newParser().tokenize(string(input))
 	fmt.Printf("%d group count\n", groupCount)
+	fmt.Printf("%d garbage count\n", garbageCount)
 }
