@@ -7,12 +7,14 @@ import (
 )
 
 // depth: range
-// var data = `
-// 0: 3
-// 1: 2
-// 4: 4
-// 6: 4
-// `
+
+/*var data = `
+0: 3
+1: 2
+4: 4
+6: 4
+`*/
+
 var data = `
 0: 5
 1: 2
@@ -63,6 +65,10 @@ type scanner struct {
 	Range int
 }
 
+// func (s *scanner) caughtAtTime(t int) bool {
+
+// }
+
 // 1-based index where 1 == top row, and range == last row
 // assumes that we start at position 1.
 // returns the direction (true for inc, false for dec)
@@ -72,6 +78,7 @@ func (s *scanner) positionAtTime(t int) (int, bool) {
 	}
 	pos := 1
 	inc := true
+
 	for i := 0; i <= t; i++ {
 		if inc {
 			pos++
@@ -96,8 +103,7 @@ func main() {
 
 	// The packet will travel along the top of each layer, and it moves at one layer per picosecond.
 	// Each picosecond, the packet moves one layer forward (its first move takes it into layer 0)
-
-	var severity int
+	scanners := map[int]*scanner{}
 	for _, scannerLine := range strings.Split(strings.TrimSpace(data), "\n") {
 		parts := strings.Split(scannerLine, ": ")
 
@@ -112,13 +118,26 @@ func main() {
 		}
 
 		s := &scanner{r}
-		timePosition, dir := s.positionAtTime(d - 1)
-		gotem := timePosition == 1 && dir
-		fmt.Printf("[scanner] depth=%d, range=%d, pos=%d, dir=%t gotem=%t\n", d, r, timePosition, dir, gotem)
+		scanners[d] = s
+	}
+
+	var tOffset int
+	for {
+		var gotem bool
+		for d, s := range scanners {
+			if (d+tOffset)%(2*s.Range-2) == 0 {
+				gotem = true
+				break
+			}
+		}
+
 		if gotem {
-			severity += d * r
+			tOffset++
+			//fmt.Printf("Offset is now %d\n", tOffset)
+		} else {
+			break
 		}
 	}
 
-	fmt.Printf("Severity is %d\n", severity)
+	fmt.Printf("offset time is %d\n", tOffset)
 }
