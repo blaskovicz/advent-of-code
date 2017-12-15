@@ -77,8 +77,86 @@ func asciiData(s string) []int {
 //var data = "flqrgnkx"
 var data = "hfdlxzhv"
 
+// rows[row][col]
+func countGroups(rows map[int]map[int]interface{}) uint32 {
+	//fmt.Printf("%#v\n", rows)
+	var groupCount uint32
+	cellsToProcess := [][]int{}
+
+	getNextCell := func() []int {
+		for r, cols := range rows {
+			for c := range cols {
+				return []int{r, c}
+			}
+		}
+		return nil
+	}
+
+	isCellSet := func(r, c int) bool {
+		if cols, ok := rows[r]; ok {
+			if _, ok := cols[c]; ok {
+				return true
+			}
+		}
+		return false
+	}
+
+	for {
+		// no more cells to process
+		if len(cellsToProcess) == 0 {
+			// if the set has more items, start a new group
+			if c := getNextCell(); c != nil {
+				//fmt.Println("Starting new cell group")
+				groupCount++
+				cellsToProcess = append(cellsToProcess, c)
+			} else {
+				// otherwise we're done
+				//fmt.Println("Done")
+				break
+			}
+		}
+		cell := cellsToProcess[0]
+		if len(cellsToProcess) == 1 {
+			cellsToProcess = [][]int{}
+		} else {
+			cellsToProcess = cellsToProcess[1:]
+		}
+
+		r := cell[0]
+		c := cell[1]
+		//fmt.Printf("processing neighbor row=%d,col=%d\n", r, c)
+		delete(rows[r], c)
+		if len(rows[r]) == 0 {
+			delete(rows, r)
+		}
+		// add cell neighbors to process if they are 1s
+
+		// up
+		if isCellSet(r-1, c) {
+			cellsToProcess = append(cellsToProcess, []int{r - 1, c})
+		}
+		// down
+		if isCellSet(r+1, c) {
+			cellsToProcess = append(cellsToProcess, []int{r + 1, c})
+		}
+		// left
+		if isCellSet(r, c-1) {
+			cellsToProcess = append(cellsToProcess, []int{r, c - 1})
+		}
+		// right
+		if isCellSet(r, c+1) {
+			cellsToProcess = append(cellsToProcess, []int{r, c + 1})
+		}
+	}
+
+	return groupCount
+}
+
 func main() {
 	var bitsUsed uint32
+	rows := map[int]map[int]interface{}{}
+
+	bits := []int64{8, 4, 2, 1}
 	for r := 0; r < 128; r++ {
 		s := newSolver()
 		base16Hash := s.denseKnotHash(fmt.Sprintf("%s-%d", data, r))
@@ -88,19 +166,25 @@ func main() {
 			if err != nil {
 				panic(fmt.Errorf("failed to parse hex string %s: %s", hexString, err))
 			}
-			if hexInt&1 == 1 {
-				bitsUsed++
-			}
-			if hexInt&2 == 2 {
-				bitsUsed++
-			}
-			if hexInt&4 == 4 {
-				bitsUsed++
-			}
-			if hexInt&8 == 8 {
-				bitsUsed++
+			i := c * 4
+			for _, b := range bits {
+				if hexInt&b == b {
+					bitsUsed++
+					c, ok := rows[r]
+					if !ok {
+						c = map[int]interface{}{}
+						rows[r] = c
+					}
+					c[i] = struct{}{}
+				}
+				i++
 			}
 		}
 	}
-	fmt.Printf("Bits used: %d\n", bitsUsed)
+
+	// another, more complicated, way to do this would have been to keep
+	// a rollowing state of the rows but it's more difficult to calculate than a traditional
+	// visitted search
+
+	fmt.Printf("Bits used: %d; Groups found: %d\n", bitsUsed, countGroups(rows))
 }
