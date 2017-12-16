@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 )
 
 type generator struct {
@@ -33,35 +32,11 @@ func main() {
 	genB := generator{seed: seedGenB, multiplyFactor: 48271, modCheck: 8}
 	var matchedTimes uint64
 	for i := 0; i < 5000000; i++ {
-		a := strconv.FormatInt(genA.next(), 2)
-		aLen := len(a) - 1
-		b := strconv.FormatInt(genB.next(), 2)
-		bLen := len(b) - 1
-		matched := true
-		if a != b {
-			for j := 0; j < 16; j++ {
-				var aVal byte
-				var bVal byte
-				aIndex := aLen - j
-				bIndex := bLen - j
-				if aIndex < 0 {
-					aVal = '0'
-				} else {
-					aVal = a[aIndex]
-				}
-				if bIndex < 0 {
-					bVal = '0'
-				} else {
-					bVal = b[bIndex]
-				}
-				if aVal != bVal {
-					matched = false
-					break
-				}
-			}
-		}
-		if matched {
-			//fmt.Printf("[%d] == %v | %v ==\n", i, a, b)
+		a := genA.next()
+		b := genB.next()
+
+		// check that the same lower 16 bits are set
+		if (a & 0xFFFF) == (b & 0xFFFF) {
 			matchedTimes++
 		}
 	}
