@@ -96,6 +96,7 @@ func main() {
 	state, l, index, f := initialState()
 	defer f.Close()
 	r := bufio.NewReader(f)
+	ops := []string{}
 	for {
 		// get next operation
 		s, err := r.ReadString(delim)
@@ -109,27 +110,48 @@ func main() {
 		} else if sLast == 0 {
 			break
 		}
-		// do operation
-		switch s[0] {
-		case 's':
-			spinCount, err := strconv.Atoi(string(s[1:]))
-			if err != nil {
-				panic(fmt.Errorf("Bad spin count: %s", err))
-			}
-			spin(state, l, index, spinCount)
-		case 'x':
-			xA, xB := parseSlashArgNums(s)
-			exchange(state, l, index, xA, xB)
-		case 'p':
-			xA, xB := parseSlashArgs(s)
-			partner(state, l, index, xA, xB)
-		default:
-			panic(fmt.Errorf("Unknown directive: %s", s))
-		}
-		//fmt.Printf("[%s] -> %s\n", s, string(state))
-		// print results
+		ops = append(ops, s)
 		if eof {
 			break
+		}
+	}
+	var previousStates = map[string]int{}
+	var ignoreLoop bool
+	for i := 0; i < 1000000000; i++ {
+		for _, s := range ops {
+			// do operation
+			switch s[0] {
+			case 's':
+				spinCount, err := strconv.Atoi(string(s[1:]))
+				if err != nil {
+					panic(fmt.Errorf("Bad spin count: %s", err))
+				}
+				spin(state, l, index, spinCount)
+			case 'x':
+				xA, xB := parseSlashArgNums(s)
+				exchange(state, l, index, xA, xB)
+			case 'p':
+				xA, xB := parseSlashArgs(s)
+				partner(state, l, index, xA, xB)
+			default:
+				panic(fmt.Errorf("Unknown directive: %s", s))
+			}
+			//fmt.Printf("[%s] -> %s\n", s, string(state))
+		}
+		if !ignoreLoop {
+			ss := string(state)
+			if after, ok := previousStates[ss]; ok {
+				fmt.Printf("Saw %s again after %d (%d)\n", ss, i, after)
+				// we're now looping, so short circuit us
+				loop := i - after
+				for i+loop < 1000000000 {
+					i += loop
+				}
+				ignoreLoop = true
+				//os.Exit(1)
+			} else {
+				previousStates[ss] = i
+			}
 		}
 	}
 	fmt.Printf("%#v\n", string(state))
