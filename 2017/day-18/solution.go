@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 func main() {
@@ -72,13 +71,15 @@ func runProg(ops [][]string, opc int, regs map[string]int, rcv <-chan int, snd c
 					song = []int{}
 				}
 				sendCount++
-				//fmt.Printf("[%d] snd %#v (x%d)\n", progID, s, sendCount)
+				if progID == 1 {
+					fmt.Printf("[%d] x%d\n", progID, sendCount)
+				}
 				sendLock.Unlock()
 				snd <- s
 			} else {
 				sendLock.Unlock()
 			}
-			time.Sleep(1 * time.Millisecond)
+			//time.Sleep(1 * time.Millisecond)
 		}
 	}()
 
@@ -104,19 +105,15 @@ func runProg(ops [][]string, opc int, regs map[string]int, rcv <-chan int, snd c
 		case "snd":
 			valToSend := regValueOrRawInt(regs, reg)
 			sendLock.Lock()
-			fmt.Printf("[%d] snd[%s] %#v\n", progID, reg, valToSend)
+			//fmt.Printf("[%d] snd[%s] %#v\n", progID, reg, valToSend)
 			song = append(song, valToSend)
 			sendLock.Unlock()
 		case "rcv":
 			regs[reg] = <-rcv
-			fmt.Printf("[%d] rcv[%s] %#v\n", progID, reg, regs[reg])
-			// go func() {
-			// 	errChan <- nil
-			// }()
-			// return
+			//fmt.Printf("[%d] rcv[%s] %#v\n", progID, reg, regs[reg])
 		case "jgz":
 			regVal := regValueOrRawInt(regs, reg)
-			if regVal != 0 {
+			if regVal > 0 {
 				i += *value
 				continue
 			}
