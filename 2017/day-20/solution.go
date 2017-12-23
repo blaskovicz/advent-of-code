@@ -112,20 +112,51 @@ func main() {
 	var minParticle *int
 	var minParticleDistance *float64
 	last := 100000
+	deadParticles := map[int]interface{}{}
 	for i := 0; i <= last; i++ {
+		// x -> y -> z -> j
+		inFlightCoordinates := map[float64]map[float64]map[float64]int{}
 		for j := range particles {
+			if _, ok := deadParticles[j]; ok {
+				continue
+			}
+
 			p := particles[j]
 			p.accelerate()
+			temp := j
+
+			// keep track of the nasty x,y,z -> j nested maps for this iteration
+			if ys, ok := inFlightCoordinates[p.pX]; ok {
+				if zs, ok := ys[p.pY]; ok {
+					if jOld, ok := zs[p.pZ]; ok {
+						// we have someone else at this point, kill them and us
+						deadParticles[jOld] = struct{}{}
+						deadParticles[temp] = struct{}{}
+						//fmt.Printf("BANG! %d is dead.\n", jOld)
+						//fmt.Printf("BANG! %d is also dead.\n", temp)
+					} else {
+						zs[p.pZ] = temp
+					}
+				} else {
+					ys[p.pY] = map[float64]int{p.pZ: temp}
+				}
+			} else {
+				inFlightCoordinates[p.pX] = map[float64]map[float64]int{
+					p.pY: map[float64]int{
+						p.pZ: temp,
+					},
+				}
+			}
+
 			if i == last {
 				m := p.distance()
 				if minParticle == nil || m < *minParticleDistance {
-					temp := j
 					minParticleDistance = &m
 					minParticle = &temp
 				}
-				fmt.Printf("[%d] particle %d p(%.0f,%.0f,%.0f) v(%.0f,%.0f,%.0f) a(%.0f,%.0f,%.0f) -> %.0f\n", i, j, p.pX, p.pY, p.pZ, p.vX, p.vY, p.vZ, p.aX, p.aY, p.aZ, m)
+				//fmt.Printf("[%d] particle %d p(%.0f,%.0f,%.0f) v(%.0f,%.0f,%.0f) a(%.0f,%.0f,%.0f) -> %.0f\n", i, j, p.pX, p.pY, p.pZ, p.vX, p.vY, p.vZ, p.aX, p.aY, p.aZ, m)
 			}
 		}
 	}
-	fmt.Printf("min particle: %d (%.0f)\n", *minParticle, *minParticleDistance)
+	fmt.Printf("min particle: %d (%.0f); %d particles left\n", *minParticle, *minParticleDistance, len(particles)-len(deadParticles))
 }
