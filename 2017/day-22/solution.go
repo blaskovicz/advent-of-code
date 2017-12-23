@@ -7,6 +7,7 @@ import (
 )
 
 type direction int
+type infectionState int
 
 const (
 	left direction = iota
@@ -14,9 +15,21 @@ const (
 	up
 	down
 
+	clean infectionState = iota
+	weakened
+	infected
+	flagged
+
 	cellClean    = '.'
 	cellInfected = '#'
 )
+
+var nextInfectState = map[infectionState]infectionState{
+	clean:    weakened,
+	weakened: infected,
+	infected: flagged,
+	flagged:  clean,
+}
 
 var rotateClock = map[direction]direction{
 	up:    right,
@@ -30,15 +43,20 @@ var rotateCounterClock = map[direction]direction{
 	down:  right,
 	right: up,
 }
+var opposite = map[direction]direction{
+	left:  right,
+	right: left,
+	up:    down,
+	down:  up,
+}
 
 type grid struct {
-	onInfected     bool
 	x              int
 	y              int
 	dir            direction
 	infectCount    int
 	trackInfection bool
-	infected       map[int]map[int]interface{} // x, y
+	infected       map[int]map[int]infectionState // x, y
 }
 
 /*
@@ -47,13 +65,20 @@ type grid struct {
 - The virus carrier moves forward one node in the direction it is facing.
 */
 func (g *grid) burst() {
-	if g.isInfected(g.x, g.y) {
-		g.dir = rotateClock[g.dir]
-		g.clean(g.x, g.y)
-	} else {
+	currentState := g.infectionState(g.x, g.y)
+	switch currentState {
+	case clean:
 		g.dir = rotateCounterClock[g.dir]
-		g.infect(g.x, g.y)
+	case weakened:
+		// no turn
+	case infected:
+		g.dir = rotateClock[g.dir]
+	case flagged:
+		g.dir = opposite[g.dir]
 	}
+
+	g.infect(g.x, g.y, nextInfectState[currentState])
+
 	switch g.dir {
 	case up:
 		g.y++
@@ -66,41 +91,42 @@ func (g *grid) burst() {
 	}
 }
 
-func (g *grid) isInfected(x, y int) bool {
+func (g *grid) infectionState(x, y int) infectionState {
 	if ys, ok := g.infected[x]; ok {
-		if _, ok := ys[y]; ok {
-			return true
+		if v, ok := ys[y]; ok {
+			return v
 		}
 	}
-	return false
+	return clean
 }
 
-func (g *grid) clean(x, y int) {
-	if ys, ok := g.infected[x]; ok {
-		if _, ok := ys[y]; ok {
-			delete(ys, y)
-		}
-		if len(ys) == 0 {
+func (g *grid) infect(x, y int, state infectionState) {
+	//fmt.Printf("[I] (%d,%d)\n", x, y)
+	var gotInfected bool
+	if state == clean {
+		delete(g.infected[x], y)
+		if len(g.infected[x]) == 0 {
 			delete(g.infected, x)
 		}
-	}
-}
-
-func (g *grid) infect(x, y int) {
-	//fmt.Printf("[I] (%d,%d)\n", x, y)
-	var infected bool
-	if ys, ok := g.infected[x]; ok {
-		if _, ok := ys[y]; !ok {
-			ys[y] = struct{}{}
-			infected = true
-		}
 	} else {
-		g.infected[x] = map[int]interface{}{
-			y: struct{}{},
+		if ys, ok := g.infected[x]; ok {
+			if v, ok := ys[y]; !ok || v != state {
+				ys[y] = state
+				if state == infected {
+					gotInfected = true
+				}
+			}
+		} else {
+			g.infected[x] = map[int]infectionState{
+				y: state,
+			}
+			if state == infected {
+				gotInfected = true
+			}
+
 		}
-		infected = true
 	}
-	if g.trackInfection && infected {
+	if gotInfected && g.trackInfection {
 		g.infectCount++
 	}
 }
@@ -119,7 +145,7 @@ func newGrid(allData []byte) *grid {
 		dir:      up,
 		x:        0,
 		y:        0,
-		infected: map[int]map[int]interface{}{},
+		infected: map[int]map[int]infectionState{},
 	}
 	offsetY := rows / 2
 	offsetX := cols / 2
@@ -131,10 +157,10 @@ func newGrid(allData []byte) *grid {
 				continue
 			}
 			oX := j - offsetX
-			g.infect(oX, oY)
+			g.infect(oX, oY, infected)
 		}
 	}
-
+	g.trackInfection = true
 	return g
 }
 
@@ -144,8 +170,7 @@ func main() {
 		panic(err)
 	}
 	g := newGrid(b)
-	g.trackInfection = true
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 10000000; i++ {
 		g.burst()
 	}
 	fmt.Printf("%#v\n", g.infectCount)
